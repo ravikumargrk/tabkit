@@ -20,11 +20,15 @@
 
 import argparse
 parser = argparse.ArgumentParser(description='Convert piped CSV data into one or more Excel (.xlsx) workbooks and worksheets.')
-parser.add_argument('-s', '--split', action='store_true', help='Uses first 2 rows as workbook name and sheet name and splits data accordingly into workbooks and sheets')
+parser.add_argument('-s', '--split', action='store_true', help='if first field is given as workbook_name:sheet_name then splits data accordingly into workbooks and sheets, Rasies error if colon is missing in first field or row is empty.')
 parser.add_argument('-o', '--output', type=str, default='.', help='Output dir (defaults to current directory)')
 parser.add_argument('-w', '--overwrite', action='store_true', help='pattern(s) to match row values inside worksheets and filter', )
 
+usage_str = parser.format_usage()
+parser.usage = '(some commands that print to stdout) |' + usage_str[6:].replace('csv2xl.py', 'csv2xl')
+
 arg_dict = vars(parser.parse_args())
+
 
 WB_DEFAULT = 'Book.xlsx'
 ST_DEFAULT = 'Sheet'
@@ -34,8 +38,7 @@ import csv
 
 if sys.stdin.isatty():
     # parser.
-    usage_str = parser.format_usage()
-    parser.usage = '(some commands that print to stdout) |' + usage_str[6:]
+    
     parser.print_usage()
     exit(0)
 else:
@@ -77,10 +80,10 @@ def createSheet(file, sheet):
     meta_data[file]['sheets'][sheet]['write_row'] = 1
 
 def getSaveFilename(path:str):
-    if arg_dict['split']:
-        import os 
-        if not os.path.exists(path):
-            return path 
+    
+    import os 
+    if not os.path.exists(path):
+        return path 
     
     if '.' in path:
         filename, ext = path[:path.rfind('.')], path[path.rfind('.'):]
@@ -115,20 +118,12 @@ from openpyxl import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 def append(file, sheet, row:list[str]):
-    new = False
     if file not in meta_data:
         createWorkBook(file, sheet)
-        # apppend line
-        new = True
     else:
         if not sheet in meta_data[file]['sheets']:
             createSheet(file, sheet)
-            # append line
-            new = True
-    # Parse CSV line properly using csv module
-
     # by now we have file and sheet
-    
     ws:Worksheet = meta_data[file]['sheets'][sheet]['object']
     current_row = meta_data[file]['sheets'][sheet]['write_row']
     for idx, field in enumerate(row):
@@ -147,6 +142,9 @@ def append(file, sheet, row:list[str]):
 
 # note: no empty workbook names
 
+currentWorkBook = WB_DEFAULT
+currentSheet = ST_DEFAULT
+
 try:
     # Read all input from stdin
     input_non_empty_flag = False
@@ -158,18 +156,24 @@ try:
         # but currentWorkBook can never be None.
 
         if arg_dict['split']:
-            if len(row) < 2:
-                print('Error: split mode is used but input row contains less than 2 fields:\nInput row from stdin:', row , file=sys.stderr)
+            # dynamicall change destination workbook and destination sheet
+            if len(row) < 1:
+                print('Error: split mode is used, expecting at least 1 fields in every row containing workbook_name:sheet_name, given row is empty.\nInput row from stdin:', row , file=sys.stderr)
                 exit(1)
 
-            if not row[0].endswith('.xlsx'):
-                print('Error: split mode is used but input row\'s first field does not contain workbook name ending with xlsx.\nInput row from stdin:', row , file=sys.stderr)
-                exit(1)
-            
-            currentWorkBook, currentSheet, row = row[0], row[1], row[2:]
-        else:
-            currentWorkBook = WB_DEFAULT
-            currentSheet = ST_DEFAULT
+            # assume first 2 fields are workbook name and sheet name
+            # this means every row should have at least 2 fields
+
+            if ':' in row[0]:
+                row_workBook, row_sheet = [s.strip() for s in row[0].split(':')]
+                if row_workBook:
+                    # change currentworkbook if placed.
+                    currentWorkBook = row_workBook
+                if row_sheet:
+                    currentSheet = row_sheet
+                row = row[1:]
+            else:
+                print('In split mode, first field in every row should contain workbook_name:sheet_name', row, file=sys.stderr)
 
         # append row at right place
         append(currentWorkBook, currentSheet, row)
