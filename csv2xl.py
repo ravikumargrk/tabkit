@@ -79,39 +79,48 @@ def createSheet(file, sheet):
     meta_data[file]['sheets'][sheet]['object'] = ws
     meta_data[file]['sheets'][sheet]['write_row'] = 1
 
-def getSaveFilename(path:str):
-    
-    import os 
-    if not os.path.exists(path):
-        return path 
-    
-    if '.' in path:
-        filename, ext = path[:path.rfind('.')], path[path.rfind('.'):]
+import os
+def getSaveFilename(root_dir, filename_ext:str):
+    if '.' in filename_ext:
+        filename, ext = filename_ext[:filename_ext.rfind('.')], filename_ext[filename_ext.rfind('.'):]
         cut_start = len(filename)
         cut_end = -len(ext)
     else:
-        filename, ext = path, ''
+        filename, ext = filename_ext, ''
         cut_start = len(filename)
         cut_end = None
 
     # check all prexisting filenames
     from glob import glob
-    # idx = len(glob(filename+'*'+ext))
-    existing_numeric_suffixes = [int(existing_filename[cut_start: cut_end]) for existing_filename in glob(filename+'*'+ext) if existing_filename[cut_start: cut_end].isnumeric()]
+    existing_filenames = [f for f in glob(filename + '*' + ext, root_dir=root_dir) if f[cut_start: cut_end].isnumeric()]
+    
+    existing_numeric_suffixes = [int(existing_file[cut_start: cut_end]) for existing_file in existing_filenames]
     max_idx = max(existing_numeric_suffixes) if existing_numeric_suffixes else 0
-    return filename + f'{max_idx+1}' + ext
+
+    if os.path.exists(os.path.join(root_dir, filename_ext)):
+        existing_filenames = [filename_ext] + existing_filenames
+
+    if not existing_filenames:
+        return existing_filenames, filename_ext
+
+    new_filename = filename + f'{max_idx+1}' + ext
+    return existing_filenames, new_filename
 
 def save_all_workbooks():
     """Save all created workbooks to files."""
     for filename, data in meta_data.items():
         wb: Workbook = data['object']
-        new_filename = getSaveFilename(filename)
+        existing_filenames, new_filename = getSaveFilename(arg_dict['output'], filename)
         if not new_filename == filename:
-            if arg_dict['overwrite']:
+            if arg_dict['overwrite'] and os.path.exists(filename):
                 new_filename = filename
                 print('Warning: overwriting', filename)
             else:
-                print('Warning:', filename, 'already exists so saving workbook as', new_filename)
+                print(
+                    'Warning: filenames similar to', filename, 'already exists in ', arg_dict['output'], ':\n', 
+                    existing_filenames,
+                    '\nSaving workbook as', new_filename, 'to avoid confusion.'
+                )
         wb.save(new_filename)
 
 from openpyxl import Workbook
