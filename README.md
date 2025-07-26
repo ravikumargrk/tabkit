@@ -5,7 +5,7 @@ Command line tools to read/write XLSX and CSV files, and more !
 
 `xl2csv`
 ```text
-usage: xl2csv.py [-h] [-nc] [-s [SHEET ...]] [-f [FILTER ...]] [files ...]
+usage: xl2csv [-h] [-nc] [-s [SHEET ...]] [-f [FILTER ...]] [files ...]
 
 Convert one or more Excel (.xlsx) workbooks into unified CSV output.
 
@@ -23,7 +23,7 @@ options:
 
 `csv2xl`
 ```text
-usage: csv2xl.py [-h] [-s] [-o OUTPUT] [-w]
+usage: (some commands that write to stdout) | csv2xl [-h] [-s] [-o OUTPUT] [-w]
 
 Convert piped CSV data into one or more Excel (.xlsx) workbooks and worksheets.
 
