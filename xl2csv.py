@@ -1,10 +1,7 @@
 # usage: xl2csv.py [-h] [-nc] [-s [SHEET ...]] [-f [FILTER ...]] [files ...]
-
 # Convert one or more Excel (.xlsx) workbooks into unified CSV output.
-
 # positional arguments:
 #   files                 pattern(s) to match input filepaths. Note: considers only .xlsx files.
-
 # options:
 #   -h, --help            show this help message and exit
 #   -nc, --no-context     Dont Include `workbook_name` and `sheet_name` columns in every output row (default OFF).
@@ -87,7 +84,7 @@ def xl2csv(file):
             # Get all data using iter_rows
             for row in worksheet.iter_rows(values_only=True):
                 # Handle completely empty rows
-                record = ['' if cell is None else str(cell) for cell in row]
+                record = ['' if cell is None else str(cell).replace('\n', '\\n') for cell in row]
                 if not pattern_matching:
                     writer.writerow(row_prefix + record)
                 else:
@@ -103,4 +100,7 @@ import sys
 import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 for xlFile in xlFilePaths:
-    xl2csv(xlFile)
+    try:
+        xl2csv(xlFile)
+    except BrokenPipeError:
+        break
