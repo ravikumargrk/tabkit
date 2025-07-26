@@ -20,6 +20,8 @@ parser.add_argument('-nc', '--no-context', action='store_true', help='Dont Inclu
 parser.add_argument('-s', '--sheet', type=str, default='*', nargs='*', help='pattern(s) to match sheet names inside workbook', )
 parser.add_argument('-f', '--filter', type=str, default='*', nargs='*', help='pattern(s) to match row values inside worksheets and filter', )
 
+parser.usage = parser.format_usage().replace('xl2csv.py', 'xl2csv')
+
 # this is where help gets print.
 arg_dict:dict[str, list[str]] = vars(parser.parse_args())
 
@@ -74,7 +76,7 @@ def xl2csv(file):
             if arg_dict['no_context']:
                 row_prefix = []
             else:
-                row_prefix = [file, sheet_name]
+                row_prefix = [os.path.basename(file) + ':' +sheet_name]
                 
             # Check if worksheet has any data
             if worksheet.max_row is None or worksheet.max_column is None:
