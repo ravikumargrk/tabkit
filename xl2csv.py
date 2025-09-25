@@ -9,6 +9,10 @@
 #                         pattern(s) to match sheet names inside workbook
 #   -f [FILTER ...], --filter [FILTER ...]
 #                         pattern(s) to match cell values inside worksheets and filter
+# Because cut command does not escape commas inside fields with quotes,
+# cut breaks csv through fields.
+# apply column filter conditions inside csv2xl
+# also need to reed xlsx temporary copy 
 
 import argparse
 parser = argparse.ArgumentParser(description='Convert one or more Excel (.xlsx) workbooks into unified CSV output.')
@@ -44,12 +48,13 @@ from fnmatch import fnmatchcase
 import os
 import tempfile
 import shutil
-
+import copy 
 def runTemp(source_file_path, func, *args, **kwargs):
     with tempfile.TemporaryDirectory() as temp_dir:
         dest_file_path = os.path.join(temp_dir, os.path.basename(source_file_path))
         shutil.copy2(source_file_path, dest_file_path)
-        return func(dest_file_path, *args, **kwargs)
+        func(dest_file_path, *args, **kwargs)
+    
 
 import re 
 def xl2csv(file):
@@ -60,7 +65,6 @@ def xl2csv(file):
     # arguments from shell
     global arg_dict
 
-    # workbook = runTemp(file, load_workbook, read_only=True, data_only=True)
     workbook = load_workbook(file, read_only=True, data_only=True)
     writer = csv.writer(sys.stdout, delimiter=',', lineterminator='\n')
     
@@ -98,9 +102,15 @@ def xl2csv(file):
 import csv 
 import sys 
 import io
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='surrogatepass')
 for xlFile in xlFilePaths:
     try:
         xl2csv(xlFile)
     except BrokenPipeError:
         break
+    except PermissionError:
+        try:
+            runTemp(xlFile, xl2csv)
+        except BrokenPipeError:
+            break
+
