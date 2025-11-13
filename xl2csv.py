@@ -65,7 +65,7 @@ def xl2csv(file):
     # arguments from shell
     global arg_dict
 
-    workbook = load_workbook(file, read_only=True, data_only=True)
+    workbook = load_workbook(file, data_only=True)
     writer = csv.writer(sys.stdout, delimiter=',', lineterminator='\n')
     
     try:
@@ -113,4 +113,5 @@ for xlFile in xlFilePaths:
             runTemp(xlFile, xl2csv)
         except BrokenPipeError:
             break
+
 
